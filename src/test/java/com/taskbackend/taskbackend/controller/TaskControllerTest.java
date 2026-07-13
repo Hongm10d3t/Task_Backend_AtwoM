@@ -3,6 +3,7 @@ package com.taskbackend.taskbackend.controller;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -76,6 +77,80 @@ class TaskControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.completed").value(false));
+    }
+
+    @Test
+    void createTask_missingTitle_returnsBadRequest() throws Exception {
+        String body = "{\"description\":\"2 cartons\"}";
+
+        mockMvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+
+        verify(taskService, never()).createTask(any());
+    }
+
+    @Test
+    void createTask_blankTitle_returnsBadRequest() throws Exception {
+        CreateTaskRequest input = new CreateTaskRequest("", "2 cartons");
+
+        mockMvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isBadRequest());
+
+        verify(taskService, never()).createTask(any());
+    }
+
+    @Test
+    void createTask_whitespaceOnlyTitle_returnsBadRequest() throws Exception {
+        CreateTaskRequest input = new CreateTaskRequest("   ", "2 cartons");
+
+        mockMvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isBadRequest());
+
+        verify(taskService, never()).createTask(any());
+    }
+
+    @Test
+    void createTask_titleTooLong_returnsBadRequest() throws Exception {
+        CreateTaskRequest input = new CreateTaskRequest("a".repeat(101), "2 cartons");
+
+        mockMvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isBadRequest());
+
+        verify(taskService, never()).createTask(any());
+    }
+
+    @Test
+    void createTask_validRequest_isAccepted() throws Exception {
+        CreateTaskRequest input = new CreateTaskRequest("Buy milk", "2 cartons");
+        TaskResponse saved = new TaskResponse(1L, "Buy milk", "2 cartons", false);
+        when(taskService.createTask(any(CreateTaskRequest.class))).thenReturn(saved);
+
+        mockMvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isCreated());
+
+        verify(taskService, times(1)).createTask(any(CreateTaskRequest.class));
+    }
+
+    @Test
+    void updateTask_blankTitle_returnsBadRequest() throws Exception {
+        UpdateTaskRequest input = new UpdateTaskRequest("", "whole wheat", true);
+
+        mockMvc.perform(put("/api/tasks/{id}", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isBadRequest());
+
+        verify(taskService, never()).updateTask(any(), any());
     }
 
     @Test
