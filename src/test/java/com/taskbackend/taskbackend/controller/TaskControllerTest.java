@@ -1,6 +1,7 @@
 package com.taskbackend.taskbackend.controller;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -44,29 +45,31 @@ class TaskControllerTest {
     private TaskService taskService;
 
     @Test
-    void getAllTasks_returnsOkWithTaskList() throws Exception {
+    void getAllTasks_returnsOkWithTaskListWrappedInApiResponse() throws Exception {
         TaskResponse task = new TaskResponse(1L, "Buy milk", null, false);
         when(taskService.getAllTasks()).thenReturn(List.of(task));
 
         mockMvc.perform(get("/api/tasks"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].title").value("Buy milk"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].title").value("Buy milk"));
     }
 
     @Test
-    void getTaskById_returnsOkWithTask() throws Exception {
+    void getTaskById_returnsOkWithTaskWrappedInApiResponse() throws Exception {
         TaskResponse task = new TaskResponse(1L, "Buy milk", null, false);
         when(taskService.getTaskById(1L)).thenReturn(task);
 
         mockMvc.perform(get("/api/tasks/{id}", 1L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.title").value("Buy milk"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(1L))
+                .andExpect(jsonPath("$.data.title").value("Buy milk"));
     }
 
     @Test
-    void createTask_returnsCreated() throws Exception {
+    void createTask_returnsCreatedWrappedInApiResponse() throws Exception {
         CreateTaskRequest input = new CreateTaskRequest("Buy milk", "2 cartons");
         TaskResponse saved = new TaskResponse(1L, "Buy milk", "2 cartons", false);
         when(taskService.createTask(any(CreateTaskRequest.class))).thenReturn(saved);
@@ -75,8 +78,9 @@ class TaskControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(input)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.completed").value(false));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(1L))
+                .andExpect(jsonPath("$.data.completed").value(false));
     }
 
     @Test
@@ -154,7 +158,7 @@ class TaskControllerTest {
     }
 
     @Test
-    void updateTask_returnsOk() throws Exception {
+    void updateTask_returnsOkWrappedInApiResponse() throws Exception {
         UpdateTaskRequest input = new UpdateTaskRequest("Buy bread", "whole wheat", true);
         TaskResponse updated = new TaskResponse(1L, "Buy bread", "whole wheat", true);
         when(taskService.updateTask(eq(1L), any(UpdateTaskRequest.class))).thenReturn(updated);
@@ -163,23 +167,27 @@ class TaskControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(input)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Buy bread"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.title").value("Buy bread"));
     }
 
     @Test
-    void completeTask_returnsOk() throws Exception {
+    void completeTask_returnsOkWrappedInApiResponse() throws Exception {
         TaskResponse completed = new TaskResponse(1L, "Buy milk", null, true);
         when(taskService.completeTask(1L)).thenReturn(completed);
 
         mockMvc.perform(patch("/api/tasks/{id}/complete", 1L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.completed").value(true));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.completed").value(true));
     }
 
     @Test
-    void deleteTask_returnsNoContent() throws Exception {
+    void deleteTask_returnsOkWrappedInApiResponse() throws Exception {
         mockMvc.perform(delete("/api/tasks/{id}", 1L))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(nullValue()));
 
         verify(taskService, times(1)).deleteTask(1L);
     }

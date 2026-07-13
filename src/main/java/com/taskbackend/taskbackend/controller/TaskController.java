@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.taskbackend.taskbackend.dto.request.CreateTaskRequest;
 import com.taskbackend.taskbackend.dto.request.UpdateTaskRequest;
+import com.taskbackend.taskbackend.dto.response.ApiResponse;
 import com.taskbackend.taskbackend.dto.response.TaskResponse;
 import com.taskbackend.taskbackend.service.TaskService;
 
@@ -32,34 +33,38 @@ public class TaskController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TaskResponse>> getAllTasks() {
-        return ResponseEntity.ok(taskService.getAllTasks());
+    public ResponseEntity<ApiResponse<List<TaskResponse>>> getAllTasks() {
+        return ResponseEntity.ok(ApiResponse.success(taskService.getAllTasks()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TaskResponse> getTaskById(@PathVariable Long id) {
-        return ResponseEntity.ok(taskService.getTaskById(id));
+    public ResponseEntity<ApiResponse<TaskResponse>> getTaskById(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(taskService.getTaskById(id)));
     }
 
     @PostMapping
-    public ResponseEntity<TaskResponse> createTask(@Valid @RequestBody CreateTaskRequest request) {
+    public ResponseEntity<ApiResponse<TaskResponse>> createTask(@Valid @RequestBody CreateTaskRequest request) {
         TaskResponse created = taskService.createTask(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Task created successfully", created));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<TaskResponse> updateTask(@PathVariable Long id, @Valid @RequestBody UpdateTaskRequest request) {
-        return ResponseEntity.ok(taskService.updateTask(id, request));
+    public ResponseEntity<ApiResponse<TaskResponse>> updateTask(@PathVariable Long id,
+            @Valid @RequestBody UpdateTaskRequest request) {
+        TaskResponse updated = taskService.updateTask(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Task updated successfully", updated));
     }
 
     @PatchMapping("/{id}/complete")
-    public ResponseEntity<TaskResponse> completeTask(@PathVariable Long id) {
-        return ResponseEntity.ok(taskService.completeTask(id));
+    public ResponseEntity<ApiResponse<TaskResponse>> completeTask(@PathVariable Long id) {
+        TaskResponse completed = taskService.completeTask(id);
+        return ResponseEntity.ok(ApiResponse.success("Task marked as completed", completed));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteTask(@PathVariable Long id) {
         taskService.deleteTask(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success("Task deleted successfully", null));
     }
 }
