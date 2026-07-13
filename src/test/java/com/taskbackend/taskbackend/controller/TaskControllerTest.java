@@ -23,9 +23,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import tools.jackson.databind.ObjectMapper;
-import com.taskbackend.taskbackend.entity.Task;
+import com.taskbackend.taskbackend.dto.request.CreateTaskRequest;
+import com.taskbackend.taskbackend.dto.request.UpdateTaskRequest;
+import com.taskbackend.taskbackend.dto.response.TaskResponse;
 import com.taskbackend.taskbackend.service.TaskService;
+
+import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(TaskController.class)
 class TaskControllerTest {
@@ -41,9 +44,7 @@ class TaskControllerTest {
 
     @Test
     void getAllTasks_returnsOkWithTaskList() throws Exception {
-        Task task = new Task();
-        task.setId(1L);
-        task.setTitle("Buy milk");
+        TaskResponse task = new TaskResponse(1L, "Buy milk", null, false);
         when(taskService.getAllTasks()).thenReturn(List.of(task));
 
         mockMvc.perform(get("/api/tasks"))
@@ -54,9 +55,7 @@ class TaskControllerTest {
 
     @Test
     void getTaskById_returnsOkWithTask() throws Exception {
-        Task task = new Task();
-        task.setId(1L);
-        task.setTitle("Buy milk");
+        TaskResponse task = new TaskResponse(1L, "Buy milk", null, false);
         when(taskService.getTaskById(1L)).thenReturn(task);
 
         mockMvc.perform(get("/api/tasks/{id}", 1L))
@@ -67,14 +66,9 @@ class TaskControllerTest {
 
     @Test
     void createTask_returnsCreated() throws Exception {
-        Task input = new Task();
-        input.setTitle("Buy milk");
-
-        Task saved = new Task();
-        saved.setId(1L);
-        saved.setTitle("Buy milk");
-        saved.setCompleted(false);
-        when(taskService.createTask(any(Task.class))).thenReturn(saved);
+        CreateTaskRequest input = new CreateTaskRequest("Buy milk", "2 cartons");
+        TaskResponse saved = new TaskResponse(1L, "Buy milk", "2 cartons", false);
+        when(taskService.createTask(any(CreateTaskRequest.class))).thenReturn(saved);
 
         mockMvc.perform(post("/api/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -86,13 +80,9 @@ class TaskControllerTest {
 
     @Test
     void updateTask_returnsOk() throws Exception {
-        Task input = new Task();
-        input.setTitle("Buy bread");
-
-        Task updated = new Task();
-        updated.setId(1L);
-        updated.setTitle("Buy bread");
-        when(taskService.updateTask(eq(1L), any(Task.class))).thenReturn(updated);
+        UpdateTaskRequest input = new UpdateTaskRequest("Buy bread", "whole wheat", true);
+        TaskResponse updated = new TaskResponse(1L, "Buy bread", "whole wheat", true);
+        when(taskService.updateTask(eq(1L), any(UpdateTaskRequest.class))).thenReturn(updated);
 
         mockMvc.perform(put("/api/tasks/{id}", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -103,9 +93,7 @@ class TaskControllerTest {
 
     @Test
     void completeTask_returnsOk() throws Exception {
-        Task completed = new Task();
-        completed.setId(1L);
-        completed.setCompleted(true);
+        TaskResponse completed = new TaskResponse(1L, "Buy milk", null, true);
         when(taskService.completeTask(1L)).thenReturn(completed);
 
         mockMvc.perform(patch("/api/tasks/{id}/complete", 1L))

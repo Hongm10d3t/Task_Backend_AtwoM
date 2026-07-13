@@ -2,19 +2,21 @@ package com.taskbackend.taskbackend.service;
 
 import java.util.List;
 
-import com.taskbackend.taskbackend.entity.Task;
+import com.taskbackend.taskbackend.dto.request.CreateTaskRequest;
+import com.taskbackend.taskbackend.dto.request.UpdateTaskRequest;
+import com.taskbackend.taskbackend.dto.response.TaskResponse;
 
 public interface TaskService {
 
-    List<Task> getAllTasks();
+    List<TaskResponse> getAllTasks();
 
-    Task getTaskById(Long id);
+    TaskResponse getTaskById(Long id);
 
-    Task createTask(Task task);
+    TaskResponse createTask(CreateTaskRequest request);
 
-    Task updateTask(Long id, Task task);
+    TaskResponse updateTask(Long id, UpdateTaskRequest request);
 
-    Task completeTask(Long id);
+    TaskResponse completeTask(Long id);
 
     void deleteTask(Long id);
 }

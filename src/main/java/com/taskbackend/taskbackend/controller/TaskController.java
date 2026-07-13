@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.taskbackend.taskbackend.entity.Task;
+import com.taskbackend.taskbackend.dto.request.CreateTaskRequest;
+import com.taskbackend.taskbackend.dto.request.UpdateTaskRequest;
+import com.taskbackend.taskbackend.dto.response.TaskResponse;
 import com.taskbackend.taskbackend.service.TaskService;
 
 @RestController
@@ -28,28 +30,28 @@ public class TaskController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Task>> getAllTasks() {
+    public ResponseEntity<List<TaskResponse>> getAllTasks() {
         return ResponseEntity.ok(taskService.getAllTasks());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
+    public ResponseEntity<TaskResponse> getTaskById(@PathVariable Long id) {
         return ResponseEntity.ok(taskService.getTaskById(id));
     }
 
     @PostMapping
-    public ResponseEntity<Task> createTask(@RequestBody Task task) {
-        Task created = taskService.createTask(task);
+    public ResponseEntity<TaskResponse> createTask(@RequestBody CreateTaskRequest request) {
+        TaskResponse created = taskService.createTask(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Task> updateTask(@PathVariable Long id, @RequestBody Task task) {
-        return ResponseEntity.ok(taskService.updateTask(id, task));
+    public ResponseEntity<TaskResponse> updateTask(@PathVariable Long id, @RequestBody UpdateTaskRequest request) {
+        return ResponseEntity.ok(taskService.updateTask(id, request));
     }
 
     @PatchMapping("/{id}/complete")
-    public ResponseEntity<Task> completeTask(@PathVariable Long id) {
+    public ResponseEntity<TaskResponse> completeTask(@PathVariable Long id) {
         return ResponseEntity.ok(taskService.completeTask(id));
     }
 

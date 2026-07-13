@@ -18,6 +18,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.taskbackend.taskbackend.dto.request.CreateTaskRequest;
+import com.taskbackend.taskbackend.dto.request.UpdateTaskRequest;
+import com.taskbackend.taskbackend.dto.response.TaskResponse;
 import com.taskbackend.taskbackend.entity.Task;
 import com.taskbackend.taskbackend.repository.TaskRepository;
 
@@ -30,28 +33,36 @@ class TaskServiceImplTest {
     @InjectMocks
     private TaskServiceImpl taskService;
 
-    @Test
-    void getAllTasks_returnsAllTasksFromRepository() {
-        Task task1 = new Task();
-        task1.setId(1L);
-        Task task2 = new Task();
-        task2.setId(2L);
-        when(taskRepository.findAll()).thenReturn(List.of(task1, task2));
-
-        List<Task> result = taskService.getAllTasks();
-
-        assertThat(result).containsExactly(task1, task2);
+    private Task taskWithId(Long id, String title, String description, boolean completed) {
+        Task task = new Task();
+        task.setId(id);
+        task.setTitle(title);
+        task.setDescription(description);
+        task.setCompleted(completed);
+        return task;
     }
 
     @Test
-    void getTaskById_whenFound_returnsTask() {
-        Task task = new Task();
-        task.setId(1L);
+    void getAllTasks_returnsAllTasksMappedToResponses() {
+        Task task1 = taskWithId(1L, "Task 1", "Desc 1", false);
+        Task task2 = taskWithId(2L, "Task 2", "Desc 2", true);
+        when(taskRepository.findAll()).thenReturn(List.of(task1, task2));
+
+        List<TaskResponse> result = taskService.getAllTasks();
+
+        assertThat(result).containsExactly(
+                new TaskResponse(1L, "Task 1", "Desc 1", false),
+                new TaskResponse(2L, "Task 2", "Desc 2", true));
+    }
+
+    @Test
+    void getTaskById_whenFound_returnsTaskResponse() {
+        Task task = taskWithId(1L, "Task 1", "Desc 1", false);
         when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
 
-        Task result = taskService.getTaskById(1L);
+        TaskResponse result = taskService.getTaskById(1L);
 
-        assertThat(result).isSameAs(task);
+        assertThat(result).isEqualTo(new TaskResponse(1L, "Task 1", "Desc 1", false));
     }
 
     @Test
@@ -64,56 +75,41 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void createTask_ignoresClientProvidedIdAndDefaultsCompletedToFalse() {
-        Task input = new Task();
-        input.setId(123L);
-        input.setTitle("Buy milk");
-        input.setCompleted(true);
-        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    void createTask_defaultsCompletedToFalseAndAssignsGeneratedId() {
+        CreateTaskRequest request = new CreateTaskRequest("Buy milk", "2 cartons");
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> {
+            Task saved = invocation.getArgument(0);
+            saved.setId(1L);
+            return saved;
+        });
 
-        Task result = taskService.createTask(input);
+        TaskResponse result = taskService.createTask(request);
 
-        assertThat(result.getId()).isNull();
-        assertThat(result.isCompleted()).isFalse();
-        assertThat(result.getTitle()).isEqualTo("Buy milk");
-        verify(taskRepository).save(input);
+        assertThat(result).isEqualTo(new TaskResponse(1L, "Buy milk", "2 cartons", false));
     }
 
     @Test
     void updateTask_keepsIdAndOnlyUpdatesTitleDescriptionCompleted() {
-        Task existing = new Task();
-        existing.setId(1L);
-        existing.setTitle("Old title");
-        existing.setDescription("Old description");
-        existing.setCompleted(false);
+        Task existing = taskWithId(1L, "Old title", "Old description", false);
         when(taskRepository.findById(1L)).thenReturn(Optional.of(existing));
         when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Task changes = new Task();
-        changes.setId(999L);
-        changes.setTitle("New title");
-        changes.setDescription("New description");
-        changes.setCompleted(true);
+        UpdateTaskRequest request = new UpdateTaskRequest("New title", "New description", true);
 
-        Task result = taskService.updateTask(1L, changes);
+        TaskResponse result = taskService.updateTask(1L, request);
 
-        assertThat(result.getId()).isEqualTo(1L);
-        assertThat(result.getTitle()).isEqualTo("New title");
-        assertThat(result.getDescription()).isEqualTo("New description");
-        assertThat(result.isCompleted()).isTrue();
+        assertThat(result).isEqualTo(new TaskResponse(1L, "New title", "New description", true));
     }
 
     @Test
     void completeTask_setsCompletedTrue() {
-        Task existing = new Task();
-        existing.setId(1L);
-        existing.setCompleted(false);
+        Task existing = taskWithId(1L, "Task 1", "Desc 1", false);
         when(taskRepository.findById(1L)).thenReturn(Optional.of(existing));
         when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Task result = taskService.completeTask(1L);
+        TaskResponse result = taskService.completeTask(1L);
 
-        assertThat(result.isCompleted()).isTrue();
+        assertThat(result.completed()).isTrue();
     }
 
     @Test

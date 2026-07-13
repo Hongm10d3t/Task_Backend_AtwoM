@@ -4,7 +4,11 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.taskbackend.taskbackend.dto.request.CreateTaskRequest;
+import com.taskbackend.taskbackend.dto.request.UpdateTaskRequest;
+import com.taskbackend.taskbackend.dto.response.TaskResponse;
 import com.taskbackend.taskbackend.entity.Task;
+import com.taskbackend.taskbackend.mapper.TaskMapper;
 import com.taskbackend.taskbackend.repository.TaskRepository;
 
 @Service
@@ -17,37 +21,36 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<Task> getAllTasks() {
-        return taskRepository.findAll();
+    public List<TaskResponse> getAllTasks() {
+        return taskRepository.findAll().stream()
+                .map(TaskMapper::toResponse)
+                .toList();
     }
 
     @Override
-    public Task getTaskById(Long id) {
-        return taskRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Task not found with id: " + id));
+    public TaskResponse getTaskById(Long id) {
+        return TaskMapper.toResponse(findTaskOrThrow(id));
     }
 
     @Override
-    public Task createTask(Task task) {
-        task.setId(null);
+    public TaskResponse createTask(CreateTaskRequest request) {
+        Task task = TaskMapper.toEntity(request);
         task.setCompleted(false);
-        return taskRepository.save(task);
+        return TaskMapper.toResponse(taskRepository.save(task));
     }
 
     @Override
-    public Task updateTask(Long id, Task task) {
-        Task existingTask = getTaskById(id);
-        existingTask.setTitle(task.getTitle());
-        existingTask.setDescription(task.getDescription());
-        existingTask.setCompleted(task.isCompleted());
-        return taskRepository.save(existingTask);
+    public TaskResponse updateTask(Long id, UpdateTaskRequest request) {
+        Task task = findTaskOrThrow(id);
+        TaskMapper.applyUpdate(task, request);
+        return TaskMapper.toResponse(taskRepository.save(task));
     }
 
     @Override
-    public Task completeTask(Long id) {
-        Task existingTask = getTaskById(id);
-        existingTask.setCompleted(true);
-        return taskRepository.save(existingTask);
+    public TaskResponse completeTask(Long id) {
+        Task task = findTaskOrThrow(id);
+        task.setCompleted(true);
+        return TaskMapper.toResponse(taskRepository.save(task));
     }
 
     @Override
@@ -56,5 +59,10 @@ public class TaskServiceImpl implements TaskService {
             throw new IllegalArgumentException("Task not found with id: " + id);
         }
         taskRepository.deleteById(id);
+    }
+
+    private Task findTaskOrThrow(Long id) {
+        return taskRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Task not found with id: " + id));
     }
 }
