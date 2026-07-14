@@ -22,6 +22,7 @@ import com.taskbackend.taskbackend.dto.request.CreateTaskRequest;
 import com.taskbackend.taskbackend.dto.request.UpdateTaskRequest;
 import com.taskbackend.taskbackend.dto.response.TaskResponse;
 import com.taskbackend.taskbackend.entity.Task;
+import com.taskbackend.taskbackend.exception.TaskNotFoundException;
 import com.taskbackend.taskbackend.repository.TaskRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -66,11 +67,11 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void getTaskById_whenNotFound_throwsIllegalArgumentException() {
+    void getTaskById_whenNotFound_throwsTaskNotFoundException() {
         when(taskRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> taskService.getTaskById(99L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(TaskNotFoundException.class)
                 .hasMessageContaining("99");
     }
 
@@ -122,11 +123,11 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void deleteTask_whenNotFound_throwsIllegalArgumentExceptionAndDoesNotDelete() {
+    void deleteTask_whenNotFound_throwsTaskNotFoundExceptionAndDoesNotDelete() {
         when(taskRepository.existsById(anyLong())).thenReturn(false);
 
         assertThatThrownBy(() -> taskService.deleteTask(99L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(TaskNotFoundException.class)
                 .hasMessageContaining("99");
 
         verify(taskRepository, never()).deleteById(anyLong());

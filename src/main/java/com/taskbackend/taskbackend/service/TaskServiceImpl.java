@@ -8,6 +8,7 @@ import com.taskbackend.taskbackend.dto.request.CreateTaskRequest;
 import com.taskbackend.taskbackend.dto.request.UpdateTaskRequest;
 import com.taskbackend.taskbackend.dto.response.TaskResponse;
 import com.taskbackend.taskbackend.entity.Task;
+import com.taskbackend.taskbackend.exception.TaskNotFoundException;
 import com.taskbackend.taskbackend.mapper.TaskMapper;
 import com.taskbackend.taskbackend.repository.TaskRepository;
 
@@ -56,13 +57,13 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public void deleteTask(Long id) {
         if (!taskRepository.existsById(id)) {
-            throw new IllegalArgumentException("Task not found with id: " + id);
+            throw new TaskNotFoundException(id);
         }
         taskRepository.deleteById(id);
     }
 
     private Task findTaskOrThrow(Long id) {
         return taskRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Task not found with id: " + id));
+                .orElseThrow(() -> new TaskNotFoundException(id));
     }
 }
