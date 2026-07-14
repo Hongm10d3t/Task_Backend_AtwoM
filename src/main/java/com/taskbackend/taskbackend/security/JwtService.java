@@ -53,6 +53,10 @@ public class JwtService {
         return extractExpiration(token).before(new Date());
     }
 
+    public long getAccessTokenExpirationMs() {
+        return accessTokenExpirationMs;
+    }
+
     public boolean isTokenValid(String token, String username) {
         try {
             return extractUsername(token).equals(username) && !isTokenExpired(token);

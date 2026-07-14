@@ -35,6 +35,16 @@ class SecurityConfigTest {
     }
 
     @Test
+    void login_isPubliclyAccessible() throws Exception {
+        // Empty body reaches the controller and fails validation (400),
+        // proving Spring Security did not block it (would be 401/403 otherwise).
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void tasks_withoutAuthentication_returnsUnauthorized() throws Exception {
         mockMvc.perform(get("/api/tasks"))
                 .andExpect(status().isUnauthorized());
