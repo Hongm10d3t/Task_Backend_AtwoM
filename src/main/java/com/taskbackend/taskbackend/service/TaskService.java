@@ -8,15 +8,15 @@ import com.taskbackend.taskbackend.dto.response.TaskResponse;
 
 public interface TaskService {
 
-    List<TaskResponse> getAllTasks();
+    List<TaskResponse> getAllTasks(Long userId);
 
-    TaskResponse getTaskById(Long id);
+    TaskResponse getTaskById(Long id, Long userId);
 
-    TaskResponse createTask(CreateTaskRequest request);
+    TaskResponse createTask(CreateTaskRequest request, Long userId);
 
-    TaskResponse updateTask(Long id, UpdateTaskRequest request);
+    TaskResponse updateTask(Long id, UpdateTaskRequest request, Long userId);
 
-    TaskResponse completeTask(Long id);
+    TaskResponse completeTask(Long id, Long userId);
 
-    void deleteTask(Long id);
+    void deleteTask(Long id, Long userId);
 }

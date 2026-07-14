@@ -21,8 +21,11 @@ import org.springframework.test.web.servlet.MvcResult;
 import com.taskbackend.taskbackend.dto.request.LoginRequest;
 import com.taskbackend.taskbackend.dto.response.UserResponse;
 import com.taskbackend.taskbackend.exception.InvalidCredentialsException;
+import com.taskbackend.taskbackend.exception.UnauthorizedException;
+import com.taskbackend.taskbackend.security.SessionUserResolver;
 import com.taskbackend.taskbackend.service.AuthService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(AuthSessionController.class)
@@ -36,6 +39,9 @@ class AuthSessionControllerTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private SessionUserResolver sessionUserResolver;
 
     @Test
     void login_validCredentials_returnsOkAndStoresOnlyUserIdInSession() throws Exception {
@@ -69,18 +75,19 @@ class AuthSessionControllerTest {
 
     @Test
     void me_withActiveSession_returnsCurrentUser() throws Exception {
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute("USER_ID", 1L);
+        when(sessionUserResolver.requireUserId(any(HttpServletRequest.class))).thenReturn(1L);
         UserResponse user = new UserResponse(1L, "existinguser", "USER");
         when(authService.getCurrentUser(1L)).thenReturn(user);
 
-        mockMvc.perform(get("/api/auth/session/me").session(session))
+        mockMvc.perform(get("/api/auth/session/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.username").value("existinguser"));
     }
 
     @Test
     void me_withoutSession_returnsUnauthorized() throws Exception {
+        when(sessionUserResolver.requireUserId(any(HttpServletRequest.class))).thenThrow(new UnauthorizedException());
+
         mockMvc.perform(get("/api/auth/session/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false));
