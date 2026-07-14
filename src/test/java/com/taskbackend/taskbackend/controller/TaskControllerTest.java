@@ -28,6 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.taskbackend.taskbackend.dto.request.CreateTaskRequest;
 import com.taskbackend.taskbackend.dto.request.UpdateTaskRequest;
 import com.taskbackend.taskbackend.dto.response.TaskResponse;
+import com.taskbackend.taskbackend.exception.TaskNotFoundException;
 import com.taskbackend.taskbackend.service.TaskService;
 
 import tools.jackson.databind.ObjectMapper;
@@ -69,6 +70,16 @@ class TaskControllerTest {
     }
 
     @Test
+    void getTaskById_whenNotFound_returnsNotFoundWrappedInApiResponse() throws Exception {
+        when(taskService.getTaskById(99L)).thenThrow(new TaskNotFoundException(99L));
+
+        mockMvc.perform(get("/api/tasks/{id}", 99L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Task not found with id: 99"));
+    }
+
+    @Test
     void createTask_returnsCreatedWrappedInApiResponse() throws Exception {
         CreateTaskRequest input = new CreateTaskRequest("Buy milk", "2 cartons");
         TaskResponse saved = new TaskResponse(1L, "Buy milk", "2 cartons", false);
@@ -96,13 +107,26 @@ class TaskControllerTest {
     }
 
     @Test
-    void createTask_blankTitle_returnsBadRequest() throws Exception {
+    void createTask_blankTitle_returnsBadRequestWithFieldErrorMessage() throws Exception {
         CreateTaskRequest input = new CreateTaskRequest("", "2 cartons");
 
         mockMvc.perform(post("/api/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(input)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data.title").value("Title must not be blank"));
+
+        verify(taskService, never()).createTask(any());
+    }
+
+    @Test
+    void createTask_malformedJson_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{invalid-json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
 
         verify(taskService, never()).createTask(any());
     }
