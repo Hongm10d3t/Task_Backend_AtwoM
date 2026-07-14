@@ -3,9 +3,12 @@ package com.taskbackend.taskbackend.service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.taskbackend.taskbackend.dto.request.LoginRequest;
 import com.taskbackend.taskbackend.dto.request.RegisterRequest;
 import com.taskbackend.taskbackend.dto.response.UserResponse;
 import com.taskbackend.taskbackend.entity.User;
+import com.taskbackend.taskbackend.exception.InvalidCredentialsException;
+import com.taskbackend.taskbackend.exception.UnauthorizedException;
 import com.taskbackend.taskbackend.exception.UsernameAlreadyExistsException;
 import com.taskbackend.taskbackend.mapper.UserMapper;
 import com.taskbackend.taskbackend.repository.UserRepository;
@@ -35,5 +38,24 @@ public class AuthServiceImpl implements AuthService {
         user.setRole(DEFAULT_ROLE);
 
         return UserMapper.toResponse(userRepository.save(user));
+    }
+
+    @Override
+    public UserResponse login(LoginRequest request) {
+        User user = userRepository.findByUsername(request.username())
+                .orElseThrow(InvalidCredentialsException::new);
+
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new InvalidCredentialsException();
+        }
+
+        return UserMapper.toResponse(user);
+    }
+
+    @Override
+    public UserResponse getCurrentUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(UnauthorizedException::new);
+        return UserMapper.toResponse(user);
     }
 }
