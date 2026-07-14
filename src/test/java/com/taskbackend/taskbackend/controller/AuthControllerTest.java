@@ -1,6 +1,8 @@
 package com.taskbackend.taskbackend.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -15,11 +17,16 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.taskbackend.taskbackend.dto.request.LoginRequest;
+import com.taskbackend.taskbackend.dto.request.RefreshTokenRequest;
 import com.taskbackend.taskbackend.dto.request.RegisterRequest;
+import com.taskbackend.taskbackend.dto.response.AccessTokenResponse;
 import com.taskbackend.taskbackend.dto.response.LoginResponse;
 import com.taskbackend.taskbackend.dto.response.UserResponse;
 import com.taskbackend.taskbackend.exception.InvalidCredentialsException;
+import com.taskbackend.taskbackend.exception.InvalidRefreshTokenException;
+import com.taskbackend.taskbackend.exception.UnauthorizedException;
 import com.taskbackend.taskbackend.exception.UsernameAlreadyExistsException;
+import com.taskbackend.taskbackend.security.JwtAuthenticationFilter;
 import com.taskbackend.taskbackend.service.AuthService;
 import com.taskbackend.taskbackend.service.JwtAuthService;
 
@@ -37,6 +44,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @MockitoBean
     private JwtAuthService jwtAuthService;
@@ -93,9 +103,9 @@ class AuthControllerTest {
     }
 
     @Test
-    void login_validCredentials_returnsOkWithAccessToken() throws Exception {
+    void login_validCredentials_returnsOkWithAccessAndRefreshToken() throws Exception {
         LoginRequest input = new LoginRequest("existinguser", "secret1");
-        LoginResponse tokenResponse = new LoginResponse("dummy.jwt.token", "Bearer", 900L);
+        LoginResponse tokenResponse = new LoginResponse("dummy.jwt.token", "dummy.refresh.token", "Bearer", 900L);
         when(jwtAuthService.login(any(LoginRequest.class))).thenReturn(tokenResponse);
 
         mockMvc.perform(post("/api/auth/login")
@@ -104,6 +114,7 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.accessToken").value("dummy.jwt.token"))
+                .andExpect(jsonPath("$.data.refreshToken").value("dummy.refresh.token"))
                 .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.data.expiresIn").value(900));
     }
@@ -129,5 +140,79 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(input)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void refresh_validRefreshToken_returnsOkWithNewAccessToken() throws Exception {
+        RefreshTokenRequest input = new RefreshTokenRequest("valid-refresh-token");
+        AccessTokenResponse response = new AccessTokenResponse("new.jwt.token", "Bearer", 900L);
+        when(jwtAuthService.refreshAccessToken(any(RefreshTokenRequest.class))).thenReturn(response);
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.accessToken").value("new.jwt.token"))
+                .andExpect(jsonPath("$.data.tokenType").value("Bearer"));
+    }
+
+    @Test
+    void refresh_invalidRefreshToken_returnsUnauthorized() throws Exception {
+        RefreshTokenRequest input = new RefreshTokenRequest("garbage-token");
+        when(jwtAuthService.refreshAccessToken(any(RefreshTokenRequest.class)))
+                .thenThrow(new InvalidRefreshTokenException());
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Invalid or expired refresh token"));
+    }
+
+    @Test
+    void refresh_blankToken_returnsBadRequest() throws Exception {
+        RefreshTokenRequest input = new RefreshTokenRequest("");
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void logout_validRequest_returnsOk() throws Exception {
+        RefreshTokenRequest input = new RefreshTokenRequest("some-refresh-token");
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        verify(jwtAuthService).logout(input);
+    }
+
+    @Test
+    void logout_blankToken_returnsBadRequest() throws Exception {
+        RefreshTokenRequest input = new RefreshTokenRequest("");
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void logout_whenNotAuthenticated_returnsUnauthorized() throws Exception {
+        RefreshTokenRequest input = new RefreshTokenRequest("some-refresh-token");
+        doThrow(new UnauthorizedException()).when(jwtAuthService).logout(any(RefreshTokenRequest.class));
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false));
     }
 }

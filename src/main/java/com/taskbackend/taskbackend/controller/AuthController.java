@@ -8,7 +8,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.taskbackend.taskbackend.dto.request.LoginRequest;
+import com.taskbackend.taskbackend.dto.request.RefreshTokenRequest;
 import com.taskbackend.taskbackend.dto.request.RegisterRequest;
+import com.taskbackend.taskbackend.dto.response.AccessTokenResponse;
 import com.taskbackend.taskbackend.dto.response.ApiResponse;
 import com.taskbackend.taskbackend.dto.response.LoginResponse;
 import com.taskbackend.taskbackend.dto.response.UserResponse;
@@ -40,5 +42,20 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse loginResponse = jwtAuthService.login(request);
         return ResponseEntity.ok(ApiResponse.success("Login successful", loginResponse));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<AccessTokenResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        AccessTokenResponse accessTokenResponse = jwtAuthService.refreshAccessToken(request);
+        return ResponseEntity.ok(ApiResponse.success("Access token refreshed successfully", accessTokenResponse));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        jwtAuthService.logout(request);
+        return ResponseEntity.ok(ApiResponse.success(
+                "Logged out successfully. The refresh token has been revoked; "
+                        + "any currently valid access token remains usable until it expires.",
+                null));
     }
 }

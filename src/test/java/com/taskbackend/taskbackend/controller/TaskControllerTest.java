@@ -32,10 +32,10 @@ import com.taskbackend.taskbackend.dto.request.UpdateTaskRequest;
 import com.taskbackend.taskbackend.dto.response.TaskResponse;
 import com.taskbackend.taskbackend.exception.TaskNotFoundException;
 import com.taskbackend.taskbackend.exception.UnauthorizedException;
-import com.taskbackend.taskbackend.security.SessionUserResolver;
+import com.taskbackend.taskbackend.security.CurrentUserService;
+import com.taskbackend.taskbackend.security.JwtAuthenticationFilter;
 import com.taskbackend.taskbackend.service.TaskService;
 
-import jakarta.servlet.http.HttpServletRequest;
 import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(TaskController.class)
@@ -54,11 +54,14 @@ class TaskControllerTest {
     private TaskService taskService;
 
     @MockitoBean
-    private SessionUserResolver sessionUserResolver;
+    private CurrentUserService currentUserService;
+
+    @MockitoBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @BeforeEach
     void setUpAuthenticatedUser() {
-        when(sessionUserResolver.requireUserId(any(HttpServletRequest.class))).thenReturn(CURRENT_USER_ID);
+        when(currentUserService.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
     }
 
     @Test
@@ -75,7 +78,7 @@ class TaskControllerTest {
 
     @Test
     void getAllTasks_whenNotAuthenticated_returnsUnauthorized() throws Exception {
-        when(sessionUserResolver.requireUserId(any(HttpServletRequest.class))).thenThrow(new UnauthorizedException());
+        when(currentUserService.getCurrentUserId()).thenThrow(new UnauthorizedException());
 
         mockMvc.perform(get("/api/tasks"))
                 .andExpect(status().isUnauthorized())
@@ -207,7 +210,7 @@ class TaskControllerTest {
 
     @Test
     void createTask_whenNotAuthenticated_returnsUnauthorized() throws Exception {
-        when(sessionUserResolver.requireUserId(any(HttpServletRequest.class))).thenThrow(new UnauthorizedException());
+        when(currentUserService.getCurrentUserId()).thenThrow(new UnauthorizedException());
         CreateTaskRequest input = new CreateTaskRequest("Buy milk", "2 cartons");
 
         mockMvc.perform(post("/api/tasks")
@@ -296,7 +299,7 @@ class TaskControllerTest {
 
     @Test
     void deleteTask_whenNotAuthenticated_returnsUnauthorized() throws Exception {
-        when(sessionUserResolver.requireUserId(any(HttpServletRequest.class))).thenThrow(new UnauthorizedException());
+        when(currentUserService.getCurrentUserId()).thenThrow(new UnauthorizedException());
 
         mockMvc.perform(delete("/api/tasks/{id}", 1L))
                 .andExpect(status().isUnauthorized());
